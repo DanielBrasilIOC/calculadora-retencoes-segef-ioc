@@ -1,0 +1,287 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Retenções | SEGEF-IOC</title>
+<style>
+:root {
+  --blue:#173d68; --blue2:#245b91; --bg:#f4f6fa;
+  --purple:#7563a6; --green:#247b59; --orange:#b66b27;
+  --text:#243247; --muted:#66758a; --border:#dce3ec;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:Arial,sans-serif;color:var(--text)}
+header{background:linear-gradient(110deg,var(--blue),var(--blue2));color:white;padding:26px 5%}
+header h1{margin:0 0 7px;font-size:25px}
+header p{margin:0;opacity:.9}
+main{max-width:1200px;margin:25px auto;padding:0 18px}
+.panel{background:white;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:18px}
+h2{font-size:18px;color:var(--blue);margin:0 0 16px}
+h3{font-size:15px;margin:18px 0 10px;color:var(--blue)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:13px}
+label{display:block;font-size:12px;font-weight:bold;color:var(--muted);margin-bottom:5px}
+input,select{width:100%;padding:10px;border:1px solid var(--border);border-radius:7px;background:white;color:var(--text)}
+input[type=file]{padding:9px}
+button{border:0;border-radius:7px;padding:11px 16px;background:var(--blue2);color:white;font-weight:bold;cursor:pointer}
+button.secondary{background:#e8edf5;color:var(--blue)}
+button:hover{filter:brightness(.95)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.note{font-size:12px;color:var(--muted);line-height:1.5}
+.status{padding:11px;border-radius:7px;background:#eef3f9;margin-top:12px;font-size:13px}
+.status.warning{background:#fff3df;color:#805019}
+.status.ok{background:#e8f5ee;color:#226344}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:11px 9px;border-bottom:1px solid var(--border);text-align:left}
+th{background:#f2f5f9;color:var(--blue)}
+.money{text-align:right;white-space:nowrap}
+.total{font-weight:bold;background:#f3f6fa}
+.pill{display:inline-block;border-radius:20px;padding:5px 9px;background:#fff1dc;color:#805019;font-size:11px}
+footer{text-align:center;padding:22px;color:var(--muted);font-size:12px}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Calculadora de Retenções</h1>
+  <p>SEGEF – Instituto Oswaldo Cruz | Fiocruz</p>
+</header>
+
+<main>
+<section class="panel">
+<h2>1. Importação do documento fiscal</h2>
+<div class="grid">
+  <div>
+    <label>Arquivo XML ou PDF</label>
+    <input type="file" id="arquivo" accept=".xml,.pdf">
+  </div>
+  <div>
+    <label>Tipo de documento</label>
+    <select id="tipo">
+      <option value="auto">Identificar automaticamente</option>
+      <option value="nfe">NF-e</option>
+      <option value="nfse">NFS-e</option>
+    </select>
+  </div>
+</div>
+<div class="actions">
+  <button onclick="lerArquivo()">Ler documento XML</button>
+  <button class="secondary" onclick="limpar()">Limpar análise</button>
+</div>
+<div id="mensagem" class="status">Selecione um XML para iniciar a leitura local.</div>
+<p class="note">O XML selecionado é processado na memória do navegador. Esta versão não envia o documento a servidores. A leitura de PDF será habilitada em uma próxima etapa, com biblioteca local.</p>
+</section>
+
+<section class="panel">
+<h2>2. Identificação e conferência</h2>
+<div class="grid">
+  <div><label>Tipo identificado</label><input id="tipoDoc" readonly></div>
+  <div><label>Número da nota</label><input id="numero" placeholder="Número"></div>
+  <div><label>Data de emissão</label><input id="emissao" placeholder="Data"></div>
+  <div><label>CNPJ do prestador</label><input id="prestador" placeholder="CNPJ"></div>
+  <div><label>Razão social do prestador</label><input id="razao" placeholder="Prestador"></div>
+  <div><label>CNPJ do tomador</label><input id="tomador" placeholder="CNPJ"></div>
+  <div><label>Valor bruto da nota (R$)</label><input id="bruto" type="number" step="0.01" min="0" placeholder="0,00"></div>
+  <div><label>Descrição / serviço</label><input id="servico" placeholder="Descrição"></div>
+</div>
+<div class="actions">
+<button onclick="calcular()">Calcular retenções informadas</button>
+</div>
+</section>
+
+<section class="panel">
+<h2>3. Retenções federais e previdenciárias</h2>
+<p class="note">Informe as alíquotas somente após verificar o regime tributário, a natureza do serviço, a hipótese legal e a legislação vigente. Os cálculos abaixo são simulações para conferência.</p>
+<div class="grid">
+  <div><label>IRRF (%)</label><input id="ir" type="number" step="0.0001" min="0" value="0"></div>
+  <div><label>CSLL (%)</label><input id="csll" type="number" step="0.0001" min="0" value="0"></div>
+  <div><label>PIS/Pasep (%)</label><input id="pis" type="number" step="0.0001" min="0" value="0"></div>
+  <div><label>Cofins (%)</label><input id="cofins" type="number" step="0.0001" min="0" value="0"></div>
+  <div><label>INSS (%)</label><input id="inss" type="number" step="0.0001" min="0" value="0"></div>
+  <div><label>ISS (%)</label><input id="iss" type="number" step="0.0001" min="0" value="0"></div>
+</div>
+<h3>Base de cálculo</h3>
+<div class="grid">
+  <div><label>Base federal (R$)</label><input id="baseFederal" type="number" step="0.01" min="0" placeholder="Usa o valor bruto se vazio"></div>
+  <div><label>Base previdenciária (R$)</label><input id="baseInss" type="number" step="0.01" min="0" placeholder="Usa o valor bruto se vazio"></div>
+  <div><label>Base ISS (R$)</label><input id="baseIss" type="number" step="0.01" min="0" placeholder="Usa o valor bruto se vazio"></div>
+</div>
+</section>
+
+<section class="panel">
+<h2>4. IBS e CBS – módulo separado</h2>
+<p class="note">Módulo de simulação da Reforma Tributária. As alíquotas e bases devem ser confirmadas conforme o período, regime, operação e regras específicas aplicáveis às aquisições públicas.</p>
+<div class="grid">
+  <div><label>Base IBS (R$)</label><input id="baseIbs" type="number" min="0" step="0.01"></div>
+  <div><label>Alíquota IBS (%)</label><input id="aliqIbs" type="number" min="0" step="0.0001" value="0"></div>
+  <div><label>Base CBS (R$)</label><input id="baseCbs" type="number" min="0" step="0.01"></div>
+  <div><label>Alíquota CBS (%)</label><input id="aliqCbs" type="number" min="0" step="0.0001" value="0"></div>
+</div>
+</section>
+
+<section class="panel">
+<h2>5. Memória de cálculo</h2>
+<div id="resultado" class="status">Aguardando cálculo.</div>
+<table>
+<thead><tr><th>Tributo</th><th>Base (R$)</th><th>Alíquota</th><th class="money">Valor (R$)</th></tr></thead>
+<tbody id="linhas"></tbody>
+<tfoot id="totais"></tfoot>
+</table>
+<div class="actions">
+<button onclick="window.print()">Imprimir / salvar em PDF</button>
+<button class="secondary" onclick="limpar()">Nova análise</button>
+</div>
+</section>
+
+<section class="panel">
+<h2>6. Alertas e validações</h2>
+<div id="alertas">
+  <p class="note">A validade fiscal, o enquadramento tributário, a incidência e a responsabilidade pela retenção precisam ser verificados antes da conclusão.</p>
+</div>
+</section>
+
+<section class="panel">
+<h2>7. Referências normativas para conferência</h2>
+<ul class="note">
+<li>IN RFB nº 1.234/2012 – retenções federais pela Administração Pública.</li>
+<li>IN RFB nº 2.110/2022 e alterações – retenções previdenciárias.</li>
+<li>LC nº 116/2003 e legislação municipal – ISS.</li>
+<li>LC nº 214/2025 e alterações – IBS e CBS.</li>
+</ul>
+<p class="note">A indicação dessas normas não substitui a consulta à versão consolidada vigente nem a análise da hipótese concreta.</p>
+</section>
+</main>
+
+<footer>SEGEF – IOC/Fiocruz | Ferramenta de apoio à conferência fiscal</footer>
+
+<script>
+const el = id => document.getElementById(id);
+const num = id => Math.max(0, Number(el(id).value) || 0);
+const fmt = n => n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const texto = (node, names) => {
+  for (const name of names) {
+    const found = [...node.getElementsByTagName('*')].find(x =>
+      x.localName.toLowerCase() === name.toLowerCase());
+    if (found && found.textContent.trim()) return found.textContent.trim();
+  }
+  return '';
+};
+
+function valorXml(node,names){
+  const s=texto(node,names);
+  const v=Number(s.replace(',','.'));
+  return Number.isFinite(v)?v:0;
+}
+
+async function lerArquivo(){
+  const file=el('arquivo').files[0];
+  if(!file){aviso('Selecione um arquivo primeiro.','warning');return;}
+  if(!file.name.toLowerCase().endsWith('.xml')){
+    aviso('Nesta primeira etapa, a leitura automática está disponível para XML. O leitor de PDF será incluído na próxima etapa.','warning');
+    return;
+  }
+  try{
+    const xml=await file.text();
+    const doc=new DOMParser().parseFromString(xml,'application/xml');
+    if(doc.querySelector('parsererror')) throw new Error('O arquivo XML não possui estrutura válida.');
+    const root=doc.documentElement;
+    const nfe=root.getElementsByTagName('*');
+    const isNfe=[...nfe].some(x=>x.localName==='infNFe');
+    const isNfse=[...nfe].some(x=>['InfNfse','infNFSe','InfDPS'].includes(x.localName));
+    const tipo=el('tipo').value==='auto'?(isNfe?'nfe':isNfse?'nfse':'desconhecido'):el('tipo').value;
+    el('tipoDoc').value=tipo==='nfe'?'NF-e':tipo==='nfse'?'NFS-e':'Não identificado';
+    if(tipo==='nfe'){
+      const ide=doc.getElementsByTagName('*');
+      const inf=[...ide].find(x=>x.localName==='infNFe')||root;
+      el('numero').value=texto(inf,['nNF']);
+      el('emissao').value=texto(inf,['dhEmi','dEmi']);
+      const emit=[...ide].find(x=>x.localName==='emit');
+      const dest=[...ide].find(x=>x.localName==='dest');
+      el('prestador').value=emit?texto(emit,['CNPJ','CPF']):'';
+      el('razao').value=emit?texto(emit,['xNome']):'';
+      el('tomador').value=dest?texto(dest,['CNPJ','CPF']):'';
+      const total=[...ide].find(x=>x.localName==='ICMSTot');
+      el('bruto').value=total?valorXml(total,['vNF']).toFixed(2):'';
+      const det=[...ide].find(x=>x.localName==='det');
+      el('servico').value=det?texto(det,['xProd']):'';
+    }else if(tipo==='nfse'){
+      el('numero').value=texto(root,['nNFSe','Numero','NumeroNfse','NumeroNFS']);
+      el('emissao').value=texto(root,['dhEmi','DataEmissao','dataEmissao']);
+      el('prestador').value=texto(root,['CNPJPrestador','CNPJ','CpfCnpj']);
+      el('razao').value=texto(root,['xNome','RazaoSocial','NomePrestador']);
+      el('tomador').value=texto(root,['CNPJTomador','CnpjTomador']);
+      const bruto=valorXml(root,['vServ','ValorServicos','ValorLiquidoNfse']);
+      el('bruto').value=bruto.toFixed(2);
+      el('servico').value=texto(root,['xDescServ','Discriminacao','Descricao']);
+    }else{
+      aviso('O XML foi aberto, mas o leiaute não foi identificado. Confira os campos manualmente.','warning');
+      return;
+    }
+    aviso('Leitura concluída no navegador. Confira todos os campos extraídos antes de calcular. A leitura não valida a autorização fiscal.','ok');
+    el('alertas').innerHTML='<p class="note">Documento lido localmente. A autorização, cancelamento, substituição, regime tributário, contrato e hipóteses de retenção ainda precisam de validação.</p>';
+  }catch(e){aviso(e.message,'warning');}
+}
+
+function calcular(){
+  const bruto=num('bruto');
+  if(bruto<=0){aviso('Informe um valor bruto válido.','warning');return;}
+  const bf=num('baseFederal')||bruto;
+  const bi=num('baseInss')||bruto;
+  const bs=num('baseIss')||bruto;
+  const tributos=[
+    ['IRRF',bf,num('ir')],
+    ['CSLL',bf,num('csll')],
+    ['PIS/Pasep',bf,num('pis')],
+    ['Cofins',bf,num('cofins')],
+    ['INSS',bi,num('inss')],
+    ['ISS',bs,num('iss')],
+    ['IBS',num('baseIbs'),num('aliqIbs')],
+    ['CBS',num('baseCbs'),num('aliqCbs')]
+  ];
+  let somaFederal=0,somaTradicional=0,somaReforma=0;
+  el('linhas').innerHTML=tributos.map(([nome,base,aliq])=>{
+    const valor=Math.round(base*aliq)/100;
+    if(['IBS','CBS'].includes(nome))somaReforma+=valor;
+    else somaTradicional+=valor;
+    if(['IRRF','CSLL','PIS/Pasep','Cofins'].includes(nome))somaFederal+=valor;
+    return `<tr><td>${nome}</td><td>${fmt(base)}</td><td>${aliq}%</td><td class="money">${fmt(valor)}</td></tr>`;
+  }).join('');
+  const liquido=bruto-somaTradicional;
+  el('totais').innerHTML=`
+  <tr class="total"><td colspan="3">Total de retenções tradicionais</td><td class="money">R$ ${fmt(somaTradicional)}</td></tr>
+  <tr class="total"><td colspan="3">Total IBS/CBS – simulação separada</td><td class="money">R$ ${fmt(somaReforma)}</td></tr>
+  <tr class="total"><td colspan="3">Valor líquido estimado (retenções tradicionais)</td><td class="money">R$ ${fmt(liquido)}</td></tr>`;
+  el('resultado').innerHTML='Cálculo aritmético concluído. Os valores são estimativas baseadas nas bases e alíquotas informadas pelo usuário.';
+  el('alertas').innerHTML=`
+  <p><span class="pill">Pendente de validação legal</span></p>
+  <ul class="note">
+  <li>Confirmar o regime tributário e eventual enquadramento no Simples Nacional.</li>
+  <li>Confirmar a hipótese legal e a base de cálculo de cada retenção.</li>
+  <li>Verificar o serviço, local de incidência e responsabilidade pelo ISS.</li>
+  <li>Para INSS, verificar cessão de mão de obra ou empreitada e demais requisitos.</li>
+  <li>Verificar as regras específicas de IBS/CBS para o período e a operação.</li>
+  <li>Consultar a situação fiscal da nota nos portais oficiais.</li>
+  </ul>`;
+}
+
+function aviso(msg,tipo=''){
+  el('mensagem').className='status '+tipo;
+  el('mensagem').textContent=msg;
+}
+function limpar(){
+  document.querySelectorAll('input').forEach(x=>{
+    if(x.type==='file')x.value='';
+    else if(x.type==='number')x.value=x.id.startsWith('aliq')||['ir','csll','pis','cofins','inss','iss'].includes(x.id)?'0':'';
+    else x.value='';
+  });
+  el('tipo').value='auto';
+  el('linhas').innerHTML='';
+  el('totais').innerHTML='';
+  el('resultado').textContent='Aguardando cálculo.';
+  el('alertas').innerHTML='<p class="note">A validade fiscal, o enquadramento tributário, a incidência e a responsabilidade pela retenção precisam ser verificados antes da conclusão.</p>';
+  aviso('Análise limpa. Selecione um novo documento.');
+}
+</script>
+</body>
+</html>
