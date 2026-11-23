@@ -38,7 +38,7 @@ async function getToken(env) {
   const body = await response.json().catch(() => ({}));
   if (!response.ok || !body.access_token) throw new Error("RFB_AUTH_FAILED:" + (body.error_description || body.mensagemErro || response.status));
   cachedToken = body.access_token;
-  cachedTokenUntil = now + Math.max(60, Number(body.expires_in || 3600) - 90) * 1000;
+  cachedTokenUntil = now + Math.max(5, Number(body.expires_in || 3600) - 90) * 1000;
   return cachedToken;
 }
 function allowedCnpj(cnpj, env) {
@@ -85,7 +85,7 @@ async function handle(request, env) {
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ urlRetorno: "" })
       });
       if (!result.tiqueteSolicitacao) return json({ error: "INVALID_RFB_RESPONSE" }, 502, origin, true);
-      return json({ service, cnpjBase, ticket: result.tiqueteSolicitacao, estimatedSeconds: result.tEASegundos ?? null, openedBy: userId, message: "Solicitação recebida pela Receita Federal. Acompanhe o processamento pelo tíquete." }, 201, origin, true);
+      return json({ service, cnpjBase, ticket: result.tiqueteSolicitacao, estimatedSeconds: result.tEASegundos ?? null, message: "Solicitação recebida pela Receita Federal. Acompanhe o processamento pelo tíquete." }, 201, origin, true);
     }
 
     const statusMatch = url.pathname.match(/^\/api\/cbs\/requests\/([A-Za-z0-9._-]{8,200})\/status$/);
