@@ -458,12 +458,12 @@ function calcularReforma(){
   const valorCbs=Math.round(baseCbs*aliqCbs)/100;
   const total=valorIbs+valorCbs;
   el('resultadoIbsCbs').className='status warning';
-  el('resultadoIbsCbs').innerHTML='<strong>Simulação aritmética informativa — não é cálculo oficial da Receita Federal.</strong><br>'+
+  el('resultadoIbsCbs').textContent='SIMULAÇÃO ARITMÉTICA INFORMATIVA — NÃO É CÁLCULO OFICIAL DA RECEITA FEDERAL. '+
     'IBS estimado: R$ '+fmt(valorIbs)+' | CBS estimada: R$ '+fmt(valorCbs)+' | Total estimado: R$ '+fmt(total)+
-    '<br>Data: '+data+' | Regime: '+regime+' | Operação: '+natureza+
-    '<br>CST: '+(el('cstRtc').value||'não informado')+' | cClassTrib: '+(el('cClassTribRtc').value||'não informado')+
-    '<br>Município: '+(el('municipioRtc').value||'não informado')+' | NCM/NBS: '+(el('nbsNcmRtc').value||'não informado')+
-    '<br><strong>Não considerar esses valores como retenção/dedução do pagamento ao fornecedor sem confirmação da hipótese legal e da responsabilidade do adquirente.</strong>';
+    ' | Data: '+data+' | Regime: '+regime+' | Operação: '+natureza+
+    ' | CST: '+(el('cstRtc').value||'não informado')+' | cClassTrib: '+(el('cClassTribRtc').value||'não informado')+
+    ' | Município: '+(el('municipioRtc').value||'não informado')+' | NCM/NBS: '+(el('nbsNcmRtc').value||'não informado')+
+    ' | NÃO considerar esses valores como retenção/dedução do pagamento ao fornecedor sem confirmação da hipótese legal e da responsabilidade do adquirente.';
 }
 
 function calcular(){
