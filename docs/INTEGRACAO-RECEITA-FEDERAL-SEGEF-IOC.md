@@ -115,3 +115,19 @@ Esta documentação registra fontes e arquitetura proposta. **Não significa que
 - Calculadora RTC Simples Nacional: https://github.com/ReceitaFederal/calculadora-rtc-simples-nacional
 - Gerador DANFSe: https://github.com/ReceitaFederal/calculadora-rtc-gerador-danfse
 - SVRS — API Conformidade Fácil: https://dfe-portal.svrs.rs.gov.br/DFE/Noticias/2505
+
+
+## 10. Implementação técnica do gateway (23/11/2026)
+
+Foi criada na branch `feature/receita-cbs-secure-backend` a primeira implementação do gateway Cloudflare Worker em `backend/cbs-gateway/`, com:
+- autenticação OAuth2 Client Credentials no endpoint Receita Integra;
+- rotas para abrir consultas de débitos, créditos, pagamentos e recolhimentos;
+- consulta de situação e download do retorno JSON;
+- verificação de JWT Cloudflare Access, CORS por origem e lista de CNPJ-base permitidos;
+- tratamento da URL assinada somente no servidor, sem retorná-la ao navegador;
+- interface da calculadora para informar o gateway, abrir consulta, acompanhar o tíquete e visualizar o JSON recebido;
+- workflow de CI para validar o bundle do Worker.
+
+**Situação:** código preparado em branch e sujeito a validação automatizada/revisão. Não está implantado em infraestrutura Cloudflare, não contém credenciais e não executou chamadas reais à Receita. A ativação depende da autorização institucional, da criação do Worker/hostname, da política Cloudflare Access, do cadastro de segredos e da confirmação do CNPJ-base e do ambiente oficial de teste.
+
+A interface web permanece sem acesso à Receita enquanto o gateway não estiver implantado e configurado. O cálculo IBS/CBS continua sendo simulação aritmética; a integração do motor oficial de cálculo local é uma frente distinta e ainda não está conectada.
