@@ -326,7 +326,7 @@ async function lerDocumentoPDF(){
         porLinha.get(y).push({x,str:item.str||''});
       }
       const linhas=[...porLinha.entries()].sort((a,b)=>b[0]-a[0]).map(([,itens])=>itens.sort((a,b)=>a.x-b.x).map(i=>i.str).join(' ').trim()).filter(Boolean);
-      textoCompleto+='\\n'+linhas.join('\\n');
+      textoCompleto+='\n'+linhas.join('\n');
     }
     if(textoCompleto.trim().length>40){
       extrairCamposTextoFiscal(textoCompleto);
