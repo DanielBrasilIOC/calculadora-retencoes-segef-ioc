@@ -1,0 +1,30 @@
+name: Validate CBS gateway
+
+on:
+  push:
+    branches: [main, "feature/receita-cbs-secure-backend"]
+    paths:
+      - "backend/cbs-gateway/**"
+      - ".github/workflows/test-cbs-gateway.yml"
+  pull_request:
+    paths:
+      - "backend/cbs-gateway/**"
+      - ".github/workflows/test-cbs-gateway.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/cbs-gateway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/cbs-gateway/package-lock.json
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Validate Worker bundle
+        run: npx wrangler deploy --dry-run
