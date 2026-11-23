@@ -87,7 +87,7 @@ footer{text-align:center;padding:22px;color:var(--muted);font-size:12px}
   <button class="secondary" onclick="limpar()">Limpar análise</button>
 </div>
 <div id="mensagem" class="status">Selecione um arquivo XML ou PDF e escolha o botão correspondente para iniciar a leitura.</div>
-<p class="note">O XML é processado na memória do navegador. O botão de PDF já está separado na interface, mas a leitura efetiva de PDF/OCR ainda depende da instalação das bibliotecas locais. Nenhum documento é enviado a servidores.</p>
+<p class="note">PDF.js e Tesseract.js são carregados dos arquivos locais do repositório. A leitura ocorre no navegador; nenhum documento é enviado a servidores. Confira e corrija os campos extraídos antes de calcular.</p>
 </section>
 
 <section class="panel">
@@ -200,14 +200,89 @@ function valorXml(node,names){
   return Number.isFinite(v)?v:0;
 }
 
-function lerDocumentoPDF(){
+async function carregarScriptLocal(src){
+  return new Promise((resolve,reject)=>{
+    const existente=[...document.scripts].find(s=>s.src.endsWith(src));
+    if(existente){resolve();return;}
+    const s=document.createElement('script');
+    s.src=src;s.onload=resolve;s.onerror=()=>reject(new Error('Não foi possível carregar a biblioteca local: '+src));
+    document.head.appendChild(s);
+  });
+}
+
+function extrairCamposTextoFiscal(textoExtraido){
+  const t=textoExtraido.replace(/\\s+/g,' ').trim();
+  const buscar=(regex)=>{const m=t.match(regex);return m?m[1].trim():'';};
+  const cnpj=buscar(/(?:CNPJ(?:\\s*:?\\s*)?)(\\d{2}[.\\s]?\\d{3}[.\\s]?\\d{3}[\\/\\s]?\\d{4}[-\\s]?\\d{2})/i);
+  const numero=buscar(/(?:NFS?-?e|NOTA FISCAL(?: ELETRÔNICA)?)[^\\d]{0,35}(\\d{3,})/i)||buscar(/(?:N[º°.]?\\s*|Número\\s*:?\\s*)(\\d{3,})/i);
+  const data=buscar(/(\\d{2}\\/\\d{2}\\/\\d{4})/);
+  const valor=buscar(/(?:VALOR(?: TOTAL)?(?: DOS SERVIÇOS)?|TOTAL DA NOTA)[^\\d]{0,25}(\\d{1,3}(?:\\.\\d{3})*,\\d{2})/i);
+  const razao=buscar(/(?:PRESTADOR(?: DE SERVIÇOS)?|RAZÃO SOCIAL)[^A-Z0-9]{0,15}([A-ZÀ-Ú0-9 .&/-]{5,})/i);
+  if(numero)el('numero').value=numero;
+  if(data)el('emissao').value=data;
+  if(cnpj)el('prestador').value=cnpj;
+  if(razao)el('razao').value=razao.slice(0,100);
+  if(valor)el('bruto').value=Number(valor.replace(/\\./g,'').replace(',','.')).toFixed(2);
+  if(!el('tipoDoc').value)el('tipoDoc').value='PDF – conferir tipo';
+}
+
+async function lerDocumentoPDF(){
   const file=el('arquivo').files[0];
   if(!file){aviso('Selecione um arquivo PDF primeiro.','warning');return;}
   if(!file.name.toLowerCase().endsWith('.pdf')){
-    aviso('O arquivo selecionado não é um PDF. Selecione um PDF ou utilize o botão Ler documento XML.','warning');
-    return;
+    aviso('O arquivo selecionado não é um PDF. Selecione um PDF ou utilize o botão Ler documento XML.','warning');return;
   }
-  aviso('PDF selecionado. A rotina de leitura PDF/OCR ainda não está instalada nesta versão; nenhum dado foi extraído. A implementação será feita com bibliotecas locais, sem envio do documento a servidores.','warning');
+  try{
+    aviso('Carregando leitor PDF local…','');
+    const pdfjs=await import('./vendor/pdfjs/pdf.mjs');
+    pdfjs.GlobalWorkerOptions.workerSrc='./vendor/pdfjs/pdf.worker.mjs';
+    const buffer=await file.arrayBuffer();
+    const pdf=await pdfjs.getDocument({data:buffer}).promise;
+    let textoCompleto='';
+    for(let p=1;p<=pdf.numPages;p++){
+      aviso('Extraindo texto da página '+p+' de '+pdf.numPages+'…','');
+      const page=await pdf.getPage(p);
+      const content=await page.getTextContent();
+      textoCompleto+=' '+content.items.map(i=>i.str||'').join(' ');
+    }
+    if(textoCompleto.trim().length>40){
+      extrairCamposTextoFiscal(textoCompleto);
+      el('tipoDoc').value=el('tipo').value==='nfse'?'NFS-e':el('tipo').value==='nfe'?'NF-e':'PDF – tipo a confirmar';
+      aviso('Texto do PDF extraído localmente. Revise e complete os campos; a identificação automática é preliminar e pode exigir correção.','ok');
+      el('alertas').innerHTML='<p class="note">Dados extraídos do texto do PDF. Confira CNPJ, prestador, tomador, número, data, valor e descrição diretamente no documento original antes de qualquer cálculo.</p>';
+      return;
+    }
+    aviso('O PDF não contém texto selecionável. Iniciando OCR em português…','');
+    await carregarScriptLocal('./vendor/tesseract/tesseract.min.js');
+    if(!window.Tesseract)throw new Error('Tesseract.js local não foi disponibilizado.');
+    const worker=await window.Tesseract.createWorker('por',1,{
+      workerPath:'./vendor/tesseract/worker.min.js',
+      corePath:'./vendor/tesseract-core/',
+      langPath:'./vendor/tessdata/',
+      logger:m=>{if(m.status==='recognizing text')aviso('OCR em português: '+Math.round((m.progress||0)*100)+'%','');}
+    });
+    try{
+      let ocr='';
+      for(let p=1;p<=pdf.numPages;p++){
+        aviso('Preparando página '+p+' de '+pdf.numPages+' para OCR…','');
+        const page=await pdf.getPage(p);
+        const viewport=page.getViewport({scale:1.8});
+        const canvas=document.createElement('canvas');
+        canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
+        await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;
+        const result=await worker.recognize(canvas);
+        ocr+=' '+result.data.text;
+        canvas.width=canvas.height=0;
+      }
+      extrairCamposTextoFiscal(ocr);
+      el('tipoDoc').value=el('tipo').value==='nfse'?'NFS-e':el('tipo').value==='nfe'?'NF-e':'PDF digitalizado – conferir';
+      aviso('OCR concluído localmente. Revise cuidadosamente todos os campos: documentos digitalizados podem gerar erros de reconhecimento.','ok');
+      el('alertas').innerHTML='<p class="note">Campos sugeridos por OCR. A conferência visual do documento é obrigatória. O OCR não valida autenticidade, autorização, cancelamento ou incidência tributária.</p>';
+    }finally{await worker.terminate();}
+  }catch(e){
+    console.error(e);
+    aviso('Não foi possível ler o PDF: '+e.message+'. Confirme se a instalação das bibliotecas locais terminou no GitHub Actions.','warning');
+  }
 }
 
 async function lerArquivo(){
