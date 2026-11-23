@@ -38,7 +38,7 @@ Pré-requisitos: Node.js LTS e conta Cloudflare institucional autorizada.
     npx wrangler login
     npx wrangler deploy
 
-Depois do deploy, configure um hostname próprio para o Worker, aplique uma política Cloudflare Access aos usuários autorizados e cadastre as variáveis/segredos acima. Ajuste a variável APP_ORIGIN para a origem exata do frontend.
+Depois do deploy, configure um hostname próprio para o Worker, aplique uma política Cloudflare Access aos usuários autorizados e cadastre as variáveis/segredos acima. Ajuste a variável APP_ORIGIN para a origem exata do frontend. Os segredos podem ser cadastrados pelo terminal, sem incluí-los no repositório:\n\n    npx wrangler secret put RFB_CLIENT_ID\n    npx wrangler secret put RFB_CLIENT_SECRET\n\nConfigure ACCESS_TEAM_DOMAIN, ACCESS_AUD e ALLOWED_CNPJ_BASES como variáveis protegidas/configurações do Worker. Não envie Client ID, Client Secret, token, CNPJ completo ou JSON fiscal pelo chat ou por issues públicas do GitHub.
 
 Faça primeiro os testes no ambiente de produção restrita usando a URL oficialmente fornecida à instituição. Não use credenciais pessoais nem credenciais de outra unidade. Faça um teste autorizado de baixo impacto antes de liberar o uso geral.
 
@@ -61,7 +61,7 @@ Valores aceitos em service: debitos, creditos, pagamentos e recolhimentos.
 - Não há upload de NFS-e, PDF ou XML para o gateway.
 - A URL assinada expira e é tratada como segredo temporário.
 - A Receita limita as aberturas a quatro chamadas por dia, por API e credencial. A própria API aplica o limite; a interface deve evitar cliques repetidos.
-- A API retorna dados da apuração CBS, não uma conclusão automática sobre retenção/dedução do pagamento ao fornecedor.
+- A API retorna dados da apuração CBS, não uma conclusão automática sobre retenção/dedução do pagamento ao fornecedor. O gateway não grava arquivos fiscais ou URL assinada; o resultado é entregue diretamente à sessão autenticada do usuário. O frontend não persiste o JSON automaticamente.
 - Não registrar payload fiscal integral, token ou URL assinada em logs.
 - Antes da produção institucional, exigir avaliação da TI/Segurança da Informação e política de retenção.
 
