@@ -69,7 +69,7 @@ footer{text-align:center;padding:22px;color:var(--muted);font-size:12px}
 <h2>1. Importação do documento fiscal</h2>
 <div class="grid">
   <div>
-    <label>Arquivo XML ou PDF</label>
+    <label>Selecione o documento fiscal (XML ou PDF)</label>
     <input type="file" id="arquivo" accept=".xml,.pdf">
   </div>
   <div>
@@ -83,10 +83,11 @@ footer{text-align:center;padding:22px;color:var(--muted);font-size:12px}
 </div>
 <div class="actions">
   <button onclick="lerArquivo()">Ler documento XML</button>
+  <button class="secondary" onclick="lerDocumentoPDF()">Ler documento PDF</button>
   <button class="secondary" onclick="limpar()">Limpar análise</button>
 </div>
-<div id="mensagem" class="status">Selecione um XML para iniciar a leitura local.</div>
-<p class="note">O XML selecionado é processado na memória do navegador. Esta versão não envia o documento a servidores. A leitura de PDF será habilitada em uma próxima etapa, com biblioteca local.</p>
+<div id="mensagem" class="status">Selecione um arquivo XML ou PDF e escolha o botão correspondente para iniciar a leitura.</div>
+<p class="note">O XML é processado na memória do navegador. O botão de PDF já está separado na interface, mas a leitura efetiva de PDF/OCR ainda depende da instalação das bibliotecas locais. Nenhum documento é enviado a servidores.</p>
 </section>
 
 <section class="panel">
@@ -197,6 +198,16 @@ function valorXml(node,names){
   const s=texto(node,names);
   const v=Number(s.replace(',','.'));
   return Number.isFinite(v)?v:0;
+}
+
+function lerDocumentoPDF(){
+  const file=el('arquivo').files[0];
+  if(!file){aviso('Selecione um arquivo PDF primeiro.','warning');return;}
+  if(!file.name.toLowerCase().endsWith('.pdf')){
+    aviso('O arquivo selecionado não é um PDF. Selecione um PDF ou utilize o botão Ler documento XML.','warning');
+    return;
+  }
+  aviso('PDF selecionado. A rotina de leitura PDF/OCR ainda não está instalada nesta versão; nenhum dado foi extraído. A implementação será feita com bibliotecas locais, sem envio do documento a servidores.','warning');
 }
 
 async function lerArquivo(){
