@@ -165,7 +165,7 @@ footer{text-align:center;padding:22px;color:var(--muted);font-size:12px}
   <div><label for="filtroTributo">Filtrar por tributo</label><select id="filtroTributo" onchange="renderNormas()"><option value="">Todos os tributos</option><option>IRRF</option><option>CSLL</option><option>PIS/Pasep</option><option>Cofins</option><option>INSS</option><option>ISS</option><option>IBS</option><option>CBS</option><option>Regras gerais</option></select></div>
   <div><label for="filtroStatus">Situação</label><select id="filtroStatus" onchange="renderNormas()"><option value="">Todas</option><option value="Vigente">Vigente</option><option value="Vigente com alterações">Vigente com alterações</option><option value="Em transição">Em transição</option><option value="Complementar">Norma complementar</option></select></div>
 </div>
-<div class="norm-meta"><strong>Última conferência das fontes:</strong> 23/11/2026. <span class="pill">Consulta informativa</span></div>
+<div class="norm-meta"><strong>Data de organização inicial da base:</strong> 23/11/2026. <strong>Conferência jurídica individual:</strong> pendente. <span class="pill">Consulta informativa</span></div>
 <div id="listaNormas" class="norm-list" aria-live="polite"></div>
 <div class="status warning"><strong>Atenção:</strong> esta base ainda exige validação jurídica/contábil institucional, especialmente para as hipóteses de retenção aplicáveis ao IOC/Fiocruz, aos contratos e aos documentos fiscais concretos. Não utilizar isoladamente para autorizar liquidação ou pagamento.</div>
 <h3>Critérios de manutenção da base</h3>
@@ -310,7 +310,7 @@ function renderNormas(){
  el('listaNormas').innerHTML=itens.length?itens.map(n=>`
  <article class="norm-card">
   <h3>${n.nome}</h3>
-  <div class="norm-tags"><span class="norm-tag">${n.status}</span>${n.tributos.map(t=>`<span class="norm-tag">${t}</span>`).join('')}<span class="norm-tag">Conferida em 23/11/2026</span></div>
+  <div class="norm-tags"><span class="norm-tag">${n.status}</span>${n.tributos.map(t=>`<span class="norm-tag">${t}</span>`).join('')}<span class="norm-tag">Cadastro: 23/11/2026 · validação pendente</span></div>
   <p><strong>Dispositivos:</strong> ${n.dispositivos}</p>
   <p><strong>Hipótese de aplicação:</strong> ${n.hipotese}</p>
   <details><summary>Exceções, histórico e fundamentos</summary>
