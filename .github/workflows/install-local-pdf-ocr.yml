@@ -44,10 +44,6 @@ jobs:
           test -s vendor/tesseract/tesseract.min.js
           test -n "$(find vendor/tesseract-core -type f -name 'tesseract-core*.wasm.js' -print -quit)"
           test -n "$(find vendor/tessdata -type f -name 'por.traineddata*' -print -quit)"
-          cp node_modules/pdfjs-dist/LICENSE vendor/pdfjs/LICENSE
-          cp node_modules/tesseract.js/LICENSE vendor/tesseract/LICENSE
-          cp node_modules/tesseract.js-core/LICENSE vendor/tesseract-core/LICENSE
-          cp node_modules/@tesseract.js-data/por/LICENSE vendor/tessdata/LICENSE
 
       - name: Commit vendored libraries
         run: |
