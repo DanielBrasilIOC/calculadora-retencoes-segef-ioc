@@ -40,6 +40,22 @@ th{background:#f2f5f9;color:var(--blue)}
 .pill{display:inline-block;border-radius:20px;padding:5px 9px;background:#fff1dc;color:#805019;font-size:11px}
 footer{text-align:center;padding:22px;color:var(--muted);font-size:12px}
 .hidden{display:none}
+
+.norm-tools{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin:14px 0}
+.norm-meta{font-size:12px;color:var(--muted);margin:12px 0}
+.norm-list{display:grid;gap:12px;margin:14px 0}
+.norm-card{border:1px solid var(--border);border-radius:9px;padding:14px;background:#fff}
+.norm-card h3{margin:0 0 8px;font-size:15px}
+.norm-card p{margin:7px 0}
+.norm-card .norm-tags{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.norm-tag{display:inline-block;border-radius:20px;padding:4px 8px;background:#edf2f8;color:#315577;font-size:11px}
+.norm-card a{color:var(--blue2);font-weight:bold}
+.norm-card details{margin-top:10px;border-top:1px solid var(--border);padding-top:9px}
+.norm-card summary{cursor:pointer;color:var(--blue);font-weight:bold;font-size:13px}
+.norm-card ul{margin:8px 0;padding-left:20px}
+@media(max-width:700px){.norm-tools{grid-template-columns:1fr}}
+@media print{.norm-tools{display:none}.norm-card{break-inside:avoid}.norm-card details{display:block}}
+
 </style>
 </head>
 <body>
@@ -141,15 +157,24 @@ footer{text-align:center;padding:22px;color:var(--muted);font-size:12px}
 </div>
 </section>
 
-<section class="panel">
-<h2>7. Referências normativas para conferência</h2>
+<section class="panel" id="secaoNormativa">
+<h2>7. Base normativa e consulta legal</h2>
+<p class="note">Repositório de consulta para apoiar a conferência fiscal. A situação e os dispositivos abaixo são referências de navegação, não um parecer jurídico nem uma conclusão automática de incidência. Sempre abra a fonte oficial e confira o texto consolidado, a data do fato gerador/pagamento e as regras específicas do caso.</p>
+<div class="norm-tools">
+  <div><label for="filtroNorma">Pesquisar norma, artigo ou tributo</label><input id="filtroNorma" type="search" placeholder="Ex.: IN 1.234, art. 3º, IRRF, INSS..." oninput="renderNormas()"></div>
+  <div><label for="filtroTributo">Filtrar por tributo</label><select id="filtroTributo" onchange="renderNormas()"><option value="">Todos os tributos</option><option>IRRF</option><option>CSLL</option><option>PIS/Pasep</option><option>Cofins</option><option>INSS</option><option>ISS</option><option>IBS</option><option>CBS</option><option>Regras gerais</option></select></div>
+  <div><label for="filtroStatus">Situação</label><select id="filtroStatus" onchange="renderNormas()"><option value="">Todas</option><option value="Vigente">Vigente</option><option value="Vigente com alterações">Vigente com alterações</option><option value="Em transição">Em transição</option><option value="Complementar">Norma complementar</option></select></div>
+</div>
+<div class="norm-meta"><strong>Última conferência das fontes:</strong> 23/11/2026. <span class="pill">Consulta informativa</span></div>
+<div id="listaNormas" class="norm-list" aria-live="polite"></div>
+<div class="status warning"><strong>Atenção:</strong> esta base ainda exige validação jurídica/contábil institucional, especialmente para as hipóteses de retenção aplicáveis ao IOC/Fiocruz, aos contratos e aos documentos fiscais concretos. Não utilizar isoladamente para autorizar liquidação ou pagamento.</div>
+<h3>Critérios de manutenção da base</h3>
 <ul class="note">
-<li>IN RFB nº 1.234/2012 – retenções federais pela Administração Pública.</li>
-<li>IN RFB nº 2.110/2022 e alterações – retenções previdenciárias.</li>
-<li>LC nº 116/2003 e legislação municipal – ISS.</li>
-<li>LC nº 214/2025 e alterações – IBS e CBS.</li>
+<li>Registrar alterações normativas e preservar o histórico de versões.</li>
+<li>Revisar a legislação antes de cada atualização do motor de cálculo e após publicação de atos relevantes.</li>
+<li>Para ISS, consultar também a legislação do município competente, o local de incidência e o enquadramento do serviço.</li>
+<li>Para IBS/CBS, observar a produção de efeitos por período e as regras específicas das aquisições pela Administração Pública.</li>
 </ul>
-<p class="note">A indicação dessas normas não substitui a consulta à versão consolidada vigente nem a análise da hipótese concreta.</p>
 </section>
 </main>
 
@@ -263,6 +288,38 @@ function calcular(){
   <li>Verificar as regras específicas de IBS/CBS para o período e a operação.</li>
   <li>Consultar a situação fiscal da nota nos portais oficiais.</li>
   </ul>`;
+}
+
+
+const normas = [
+ {id:"in1234",nome:"Instrução Normativa RFB nº 1.234, de 11/01/2012",status:"Vigente com alterações",tributos:["IRRF","CSLL","PIS/Pasep","Cofins"],dispositivos:"Arts. 1º a 3º; arts. 4º a 6º; Anexo I e demais anexos aplicáveis.",hipotese:"Retenções na fonte nos pagamentos efetuados pelas entidades e órgãos abrangidos pela IN a pessoas jurídicas pelo fornecimento de bens e prestação de serviços. Para a Administração Pública Federal, a análise normalmente envolve a retenção conjunta prevista no ato e a natureza do bem/serviço.",excecoes:"Verificar hipóteses de não retenção, imunidade, isenção, alíquota zero, Simples Nacional, natureza do pagamento e documentos comprobatórios, conforme dispositivos específicos. Não aplicar alíquota genérica sem classificar a operação.",historico:"A IN foi alterada, entre outros atos, pela IN RFB nº 2.145/2023. Consultar o histórico completo e o Anexo I na versão compilada oficial antes de utilizar.",url:"https://normas.receita.fazenda.gov.br/sijut2consulta/link.action?idAto=37200&visao=compilado",fonte:"Receita Federal – Sistema Normas",base:"Lei nº 9.430/1996, art. 64; Lei nº 10.833/2003, arts. 34 e 35."},
+ {id:"in2110",nome:"Instrução Normativa RFB nº 2.110, de 17/10/2022",status:"Vigente com alterações",tributos:["INSS"],dispositivos:"Dispositivos sobre retenção previdenciária na cessão de mão de obra e empreitada, especialmente arts. 110 e seguintes, conforme texto consolidado.",hipotese:"Retenção previdenciária em serviços executados mediante cessão de mão de obra ou empreitada, quando presentes os requisitos legais e regulamentares.",excecoes:"Verificar serviços sujeitos, exclusões, hipóteses de dispensa, base de cálculo, deduções permitidas, materiais/equipamentos discriminados e regime tributário do prestador.",historico:"A página oficial registra alterações pelas IN RFB nº 2.185/2024, nº 2.289/2025 e nº 2.321/2026. Conferir o texto compilado e o histórico antes de aplicar.",url:"https://normas.receita.fazenda.gov.br/sijut2consulta/normas.receita/link.action?idAto=126687&visao=compilado",fonte:"Receita Federal – Sistema Normas",base:"Lei nº 8.212/1991, art. 31; Decreto nº 3.048/1999."},
+ {id:"lei9430",nome:"Lei nº 9.430, de 27/12/1996",status:"Vigente com alterações",tributos:["IRRF","CSLL","PIS/Pasep","Cofins"],dispositivos:"Art. 64 e parágrafos.",hipotese:"Fundamento legal das retenções sobre pagamentos efetuados por órgãos, autarquias e fundações da Administração Pública Federal a pessoas jurídicas por fornecimento de bens ou prestação de serviços.",excecoes:"A aplicação depende do sujeito pagador, beneficiário, natureza do pagamento e regras legais complementares. Ler em conjunto com a IN RFB nº 1.234/2012.",historico:"Lei com alterações posteriores. Utilizar o texto compilado no Portal da Legislação.",url:"https://www.planalto.gov.br/ccivil_03/leis/l9430.htm",fonte:"Planalto – Legislação Federal",base:"Regulamentação: IN RFB nº 1.234/2012."},
+ {id:"lei10833",nome:"Lei nº 10.833, de 29/12/2003",status:"Vigente com alterações",tributos:["CSLL","PIS/Pasep","Cofins"],dispositivos:"Arts. 30 a 35, observadas as alterações e a regulamentação aplicável.",hipotese:"Disciplina retenções de contribuições em pagamentos entre pessoas jurídicas e estabelece regras específicas para órgãos e entidades da Administração Pública.",excecoes:"As hipóteses e dispensas variam conforme o tipo de pagamento, prestador e regime tributário. Para pagamentos da Administração Federal, analisar especialmente os arts. 34 e 35 em conjunto com a IN RFB nº 1.234/2012.",historico:"Consultar texto compilado e alterações no Portal da Legislação.",url:"https://www.planalto.gov.br/ccivil_03/leis/2003/l10.833.htm",fonte:"Planalto – Legislação Federal",base:"IN RFB nº 1.234/2012."},
+ {id:"lei8212",nome:"Lei nº 8.212, de 24/07/1991",status:"Vigente com alterações",tributos:["INSS"],dispositivos:"Art. 31.",hipotese:"Base legal da retenção previdenciária sobre o valor bruto da nota fiscal ou fatura de prestação de serviços executados mediante cessão de mão de obra, nos termos legais.",excecoes:"A incidência exige enquadramento na hipótese legal e observância das regras de exclusão, dedução e dispensa previstas na legislação e na IN RFB nº 2.110/2022.",historico:"Lei com alterações posteriores. Consultar texto compilado e regulamentação vigente.",url:"https://www.planalto.gov.br/ccivil_03/leis/l8212cons.htm",fonte:"Planalto – Legislação Federal",base:"IN RFB nº 2.110/2022; Decreto nº 3.048/1999."},
+ {id:"lc116",nome:"Lei Complementar nº 116, de 31/07/2003",status:"Vigente com alterações",tributos:["ISS"],dispositivos:"Arts. 1º a 6º; lista de serviços anexa, especialmente regras de local de incidência e responsabilidade.",hipotese:"Incidência do ISS sobre os serviços constantes da lista anexa. A retenção pelo tomador depende das hipóteses de responsabilidade previstas na LC e na legislação do município competente.",excecoes:"Verificar local da incidência, exceções do art. 3º, responsabilidade do art. 6º, lista de serviços e legislação municipal. A LC federal não substitui a lei municipal.",historico:"Texto sujeito a alterações e interação com a transição da reforma tributária. A página oficial contém referências a alterações posteriores, inclusive pela LC nº 214/2025.",url:"https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp116.htm",fonte:"Planalto – Legislação Federal",base:"Legislação municipal do local competente; regulamento municipal do ISS."},
+ {id:"lc214",nome:"Lei Complementar nº 214, de 16/01/2025",status:"Em transição",tributos:["IBS","CBS"],dispositivos:"Livro I; regras gerais e disposições específicas. Para aquisições pela Administração Pública, examinar especialmente art. 473 e dispositivos relacionados, além das regras de produção de efeitos.",hipotese:"Institui IBS e CBS e disciplina o novo sistema de tributação sobre consumo. A aplicação depende do período de transição, natureza da operação, fornecedor, adquirente e regras específicas para Administração Pública.",excecoes:"Não presumir alíquotas nem retenção. Conferir produção de efeitos, regimes diferenciados, regras de crédito, pagamento e aquisições governamentais, bem como alterações posteriores.",historico:"Texto compilado deve ser consultado considerando alterações, inclusive LC nº 227/2026 e regulamentação posterior. A transição exige revisão por exercício.",url:"https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214compilado.htm",fonte:"Planalto – Texto compilado",base:"Regulamentos e atos complementares vigentes para o período da operação."},
+ {id:"lc123",nome:"Lei Complementar nº 123, de 14/12/2006",status:"Vigente com alterações",tributos:["IRRF","CSLL","PIS/Pasep","Cofins","INSS","ISS"],dispositivos:"Art. 13, § 1º; regras do Simples Nacional e dispositivos relacionados ao recolhimento unificado.",hipotese:"Estabelece o regime do Simples Nacional. O enquadramento do fornecedor pode afetar a retenção de tributos, conforme tributo, atividade, hipótese legal e documentação apresentada.",excecoes:"Não concluir dispensa apenas pela indicação de optante. Verificar regras específicas de cada retenção, atividades, anexos, declarações e exceções legais.",historico:"Lei complementar com alterações posteriores. Consultar o texto compilado, inclusive alterações relacionadas à reforma tributária.",url:"https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp123.htm",fonte:"Planalto – Legislação Federal",base:"Resolução CGSN e atos da Receita Federal aplicáveis, além das normas específicas de cada tributo."},
+ {id:"reinf",nome:"Receita Federal – Perguntas frequentes da EFD-Reinf",status:"Complementar",tributos:["IRRF","CSLL","PIS/Pasep","Cofins","INSS"],dispositivos:"Orientações operacionais sobre eventos, natureza de rendimentos e códigos de receita.",hipotese:"Consulta operacional para escrituração e recolhimento das retenções declaradas na EFD-Reinf. A Receita informa regras específicas para unidades gestoras federais que operam no SIAFI, inclusive operações internas a partir de 01/08/2025.",excecoes:"Perguntas frequentes orientam procedimentos, mas não substituem a lei, a IN aplicável, o manual vigente e a análise da operação.",historico:"Conteúdo eletrônico atualizado pela Receita Federal. Conferir a data e a versão da orientação no portal.",url:"https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/perguntas-frequentes/sped/efd-reinf/efdr",fonte:"Receita Federal – EFD-Reinf",base:"IN RFB nº 1.234/2012; IN RFB nº 2.110/2022; leiautes e manuais vigentes."}
+];
+function renderNormas(){
+ const q=(el('filtroNorma')?.value||'').toLocaleLowerCase('pt-BR');
+ const trib=el('filtroTributo')?.value||'';
+ const st=el('filtroStatus')?.value||'';
+ const itens=normas.filter(n=>(!trib||n.tributos.includes(trib)|| (trib==='Regras gerais'&&n.tributos.length>1))&&(!st||n.status===st)&&(!q||[n.nome,n.dispositivos,n.hipotese,n.excecoes,n.historico,n.base,n.tributos.join(' ')].join(' ').toLocaleLowerCase('pt-BR').includes(q)));
+ el('listaNormas').innerHTML=itens.length?itens.map(n=>`
+ <article class="norm-card">
+  <h3>${n.nome}</h3>
+  <div class="norm-tags"><span class="norm-tag">${n.status}</span>${n.tributos.map(t=>`<span class="norm-tag">${t}</span>`).join('')}<span class="norm-tag">Conferida em 23/11/2026</span></div>
+  <p><strong>Dispositivos:</strong> ${n.dispositivos}</p>
+  <p><strong>Hipótese de aplicação:</strong> ${n.hipotese}</p>
+  <details><summary>Exceções, histórico e fundamentos</summary>
+   <p><strong>Exceções e cuidados:</strong> ${n.excecoes}</p>
+   <p><strong>Histórico:</strong> ${n.historico}</p>
+   <p><strong>Normas relacionadas:</strong> ${n.base}</p>
+   <p><strong>Fonte:</strong> <a href="${n.url}" target="_blank" rel="noopener noreferrer">${n.fonte} – consultar texto oficial</a></p>
+  </details>
+ </article>`).join(''):'<p class="note">Nenhuma norma encontrada com os filtros informados.</p>';
 }
 
 function aviso(msg,tipo=''){
