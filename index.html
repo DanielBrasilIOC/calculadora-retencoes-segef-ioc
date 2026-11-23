@@ -126,15 +126,30 @@ footer{text-align:center;padding:22px;color:var(--muted);font-size:12px}
 </div>
 </section>
 
-<section class="panel">
-<h2>4. IBS e CBS – módulo separado</h2>
-<p class="note">Módulo de simulação da Reforma Tributária. As alíquotas e bases devem ser confirmadas conforme o período, regime, operação e regras específicas aplicáveis às aquisições públicas.</p>
+<section class="panel" id="moduloReforma">
+<h2>4. IBS e CBS – módulo da Reforma Tributária</h2>
+<p class="note">Módulo separado das retenções tradicionais. O marco operacional definido para esta calculadora é 01/01/2027. O preenchimento abaixo permite uma simulação aritmética com parâmetros informados pelo usuário; não consulta nem substitui o motor oficial da Receita Federal.</p>
 <div class="grid">
-  <div><label>Base IBS (R$)</label><input id="baseIbs" type="number" min="0" step="0.01"></div>
-  <div><label>Alíquota IBS (%)</label><input id="aliqIbs" type="number" min="0" step="0.0001" value="0"></div>
-  <div><label>Base CBS (R$)</label><input id="baseCbs" type="number" min="0" step="0.01"></div>
-  <div><label>Alíquota CBS (%)</label><input id="aliqCbs" type="number" min="0" step="0.0001" value="0"></div>
+  <div><label for="dataOperacaoRtc">Data da operação / pagamento</label><input id="dataOperacaoRtc" type="date" value="2027-01-01"></div>
+  <div><label for="regimeRtc">Regime do fornecedor</label><select id="regimeRtc"><option value="">Selecione</option><option value="regular">Regime regular</option><option value="simples">Simples Nacional</option><option value="imune">Imune / isento / hipótese específica</option><option value="nao-identificado">Não identificado</option></select></div>
+  <div><label for="naturezaRtc">Natureza da operação</label><select id="naturezaRtc"><option value="">Selecione</option><option>Fornecimento de bens</option><option>Prestação de serviços</option><option>Serviço contínuo / parcelas</option><option>Outra / analisar</option></select></div>
+  <div><label for="municipioRtc">Município de destino / incidência</label><input id="municipioRtc" placeholder="Município/UF"></div>
+  <div><label for="cstRtc">CST IBS/CBS</label><input id="cstRtc" placeholder="Conforme tabela vigente"></div>
+  <div><label for="cClassTribRtc">cClassTrib</label><input id="cClassTribRtc" placeholder="Código de classificação"></div>
+  <div><label for="nbsNcmRtc">NCM / NBS (quando aplicável)</label><input id="nbsNcmRtc" placeholder="Código do item/serviço"></div>
+  <div><label for="baseIbs">Base de cálculo IBS (R$)</label><input id="baseIbs" type="number" min="0" step="0.01"></div>
+  <div><label for="aliqIbs">Alíquota IBS (%)</label><input id="aliqIbs" type="number" min="0" step="0.0001" value="0"></div>
+  <div><label for="baseCbs">Base de cálculo CBS (R$)</label><input id="baseCbs" type="number" min="0" step="0.01"></div>
+  <div><label for="aliqCbs">Alíquota CBS (%)</label><input id="aliqCbs" type="number" min="0" step="0.0001" value="0"></div>
 </div>
+<div class="actions">
+  <button onclick="calcularReforma()">Simular IBS/CBS</button>
+  <button class="secondary" onclick="window.open('https://github.com/ReceitaFederal/calculadora-rtc-regime-regular','_blank','noopener')">Calculadora oficial – regime regular</button>
+  <button class="secondary" onclick="window.open('https://github.com/ReceitaFederal/calculadora-rtc-simples-nacional','_blank','noopener')">Calculadora oficial – Simples Nacional</button>
+  <button class="secondary" onclick="window.open('https://dfe-portal.svrs.rs.gov.br/DFE/Noticias/2505','_blank','noopener')">Tabelas CST / cClassTrib</button>
+</div>
+<div id="resultadoIbsCbs" class="status">Aguardando parâmetros para simulação. Nenhuma alíquota oficial é preenchida automaticamente.</div>
+<p class="note">A consulta às tabelas oficiais e às APIs autenticadas ainda não está conectada. Não inserir certificados, tokens ou credenciais nesta página. Para uso em aquisição pública, confirmar a regra aplicável, o período de vigência, o regime do fornecedor, a classificação tributária e eventual responsabilidade do adquirente. IBS/CBS destacados ou calculados não são automaticamente valores a deduzir do pagamento ao fornecedor.</p>
 </section>
 
 <section class="panel">
@@ -417,6 +432,40 @@ async function lerArquivo(){
   }catch(e){aviso(e.message,'warning');}
 }
 
+function calcularReforma(){
+  const data=el('dataOperacaoRtc').value;
+  const regime=el('regimeRtc').value;
+  const natureza=el('naturezaRtc').value;
+  const baseIbs=num('baseIbs'), baseCbs=num('baseCbs');
+  const aliqIbs=num('aliqIbs'), aliqCbs=num('aliqCbs');
+  if(!data){el('resultadoIbsCbs').className='status warning';el('resultadoIbsCbs').textContent='Informe a data da operação.';return;}
+  if(data<'2027-01-01'){
+    el('resultadoIbsCbs').className='status warning';
+    el('resultadoIbsCbs').textContent='Fora do marco operacional configurado nesta calculadora (01/01/2027). O ano de 2026 deve ser tratado como período de transição/testes, conforme a regra legal específica, sem aplicar automaticamente parâmetros de 2027.';
+    return;
+  }
+  if(!regime||!natureza){
+    el('resultadoIbsCbs').className='status warning';
+    el('resultadoIbsCbs').textContent='Informe o regime do fornecedor e a natureza da operação antes de simular.';
+    return;
+  }
+  if((baseIbs>0&&aliqIbs===0)||(baseCbs>0&&aliqCbs===0)){
+    el('resultadoIbsCbs').className='status warning';
+    el('resultadoIbsCbs').textContent='Há base informada sem alíquota. Consulte as tabelas e regras oficiais aplicáveis; não foi presumida nenhuma alíquota.';
+    return;
+  }
+  const valorIbs=Math.round(baseIbs*aliqIbs)/100;
+  const valorCbs=Math.round(baseCbs*aliqCbs)/100;
+  const total=valorIbs+valorCbs;
+  el('resultadoIbsCbs').className='status warning';
+  el('resultadoIbsCbs').innerHTML='<strong>Simulação aritmética informativa — não é cálculo oficial da Receita Federal.</strong><br>'+
+    'IBS estimado: R$ '+fmt(valorIbs)+' | CBS estimada: R$ '+fmt(valorCbs)+' | Total estimado: R$ '+fmt(total)+
+    '<br>Data: '+data+' | Regime: '+regime+' | Operação: '+natureza+
+    '<br>CST: '+(el('cstRtc').value||'não informado')+' | cClassTrib: '+(el('cClassTribRtc').value||'não informado')+
+    '<br>Município: '+(el('municipioRtc').value||'não informado')+' | NCM/NBS: '+(el('nbsNcmRtc').value||'não informado')+
+    '<br><strong>Não considerar esses valores como retenção/dedução do pagamento ao fornecedor sem confirmação da hipótese legal e da responsabilidade do adquirente.</strong>';
+}
+
 function calcular(){
   const bruto=num('bruto');
   if(bruto<=0){aviso('Informe um valor bruto válido.','warning');return;}
@@ -430,21 +479,17 @@ function calcular(){
     ['Cofins',bf,num('cofins')],
     ['INSS',bi,num('inss')],
     ['ISS',bs,num('iss')],
-    ['IBS',num('baseIbs'),num('aliqIbs')],
-    ['CBS',num('baseCbs'),num('aliqCbs')]
   ];
-  let somaFederal=0,somaTradicional=0,somaReforma=0;
+  let somaFederal=0,somaTradicional=0;
   el('linhas').innerHTML=tributos.map(([nome,base,aliq])=>{
     const valor=Math.round(base*aliq)/100;
-    if(['IBS','CBS'].includes(nome))somaReforma+=valor;
-    else somaTradicional+=valor;
+    somaTradicional+=valor;
     if(['IRRF','CSLL','PIS/Pasep','Cofins'].includes(nome))somaFederal+=valor;
     return `<tr><td>${nome}</td><td>${fmt(base)}</td><td>${aliq}%</td><td class="money">${fmt(valor)}</td></tr>`;
   }).join('');
   const liquido=bruto-somaTradicional;
   el('totais').innerHTML=`
   <tr class="total"><td colspan="3">Total de retenções tradicionais</td><td class="money">R$ ${fmt(somaTradicional)}</td></tr>
-  <tr class="total"><td colspan="3">Total IBS/CBS – simulação separada</td><td class="money">R$ ${fmt(somaReforma)}</td></tr>
   <tr class="total"><td colspan="3">Valor líquido estimado (retenções tradicionais)</td><td class="money">R$ ${fmt(liquido)}</td></tr>`;
   el('resultado').innerHTML='Cálculo aritmético concluído. Os valores são estimativas baseadas nas bases e alíquotas informadas pelo usuário.';
   el('alertas').innerHTML=`
@@ -454,7 +499,7 @@ function calcular(){
   <li>Confirmar a hipótese legal e a base de cálculo de cada retenção.</li>
   <li>Verificar o serviço, local de incidência e responsabilidade pelo ISS.</li>
   <li>Para INSS, verificar cessão de mão de obra ou empreitada e demais requisitos.</li>
-  <li>Verificar as regras específicas de IBS/CBS para o período e a operação.</li>
+  <li>Verificar as regras específicas de IBS/CBS no módulo separado; não tratar destaque como retenção automática.</li>
   <li>Consultar a situação fiscal da nota nos portais oficiais.</li>
   </ul>`;
 }
@@ -501,6 +546,9 @@ function limpar(){
     else if(x.type==='number')x.value=x.id.startsWith('aliq')||['ir','csll','pis','cofins','inss','iss'].includes(x.id)?'0':'';
     else x.value='';
   });
+  ['regimeRtc','naturezaRtc'].forEach(id=>{if(el(id))el(id).value='';});
+  if(el('dataOperacaoRtc'))el('dataOperacaoRtc').value='2027-01-01';
+  if(el('resultadoIbsCbs')){el('resultadoIbsCbs').className='status';el('resultadoIbsCbs').textContent='Aguardando parâmetros para simulação. Nenhuma alíquota oficial é preenchida automaticamente.';}
   el('tipo').value='auto';
   el('linhas').innerHTML='';
   el('totais').innerHTML='';
