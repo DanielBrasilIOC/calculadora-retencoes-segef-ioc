@@ -211,19 +211,94 @@ async function carregarScriptLocal(src){
 }
 
 function extrairCamposTextoFiscal(textoExtraido){
-  const t=textoExtraido.replace(/\s+/g,' ').trim();
-  const buscar=(regex)=>{const m=t.match(regex);return m?m[1].trim():'';};
-  const cnpj=buscar(/(?:CNPJ(?:\s*:?\s*)?)(\d{2}[.\s]?\d{3}[.\s]?\d{3}[\/\s]?\d{4}[-\s]?\d{2})/i);
-  const numero=buscar(/(?:NFS?-?e|NOTA FISCAL(?: ELETRÔNICA)?)[^\d]{0,35}(\d{3,})/i)||buscar(/(?:N[º°.]?\s*|Número\s*:?\s*)(\d{3,})/i);
-  const data=buscar(/(\d{2}\/\d{2}\/\d{4})/);
-  const valor=buscar(/(?:VALOR(?: TOTAL)?(?: DOS SERVIÇOS)?|TOTAL DA NOTA)[^\d]{0,25}(\d{1,3}(?:\.\d{3})*,\d{2})/i);
-  const razao=buscar(/(?:PRESTADOR(?: DE SERVIÇOS)?|RAZÃO SOCIAL)[^A-Z0-9]{0,15}([A-ZÀ-Ú0-9 .&/-]{5,})/i);
+  // A extração deve priorizar rótulos do documento. Não usar o primeiro CNPJ,
+  // a primeira data ou o primeiro valor encontrado: DANFSe contém dados de
+  // prestador, tomador, competência, emissão, tributos e totais diferentes.
+  const linhas=textoExtraido.split(/\r?\n/).map(s=>s.replace(/\s+/g,' ').trim()).filter(Boolean);
+  const texto=linhas.join('\n');
+  const plano=texto.replace(/\s+/g,' ');
+  const achar=(re,origem=plano)=>{const m=origem.match(re);return m?m[1].trim():'';};
+  const cnpjLimpo=s=>(s||'').replace(/\D/g,'');
+  const cnpjFormatado=s=>{
+    const d=cnpjLimpo(s);
+    return d.length===14?d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5'):'';
+  };
+  const valorBR=s=>{
+    if(!s)return '';
+    const n=Number(s.replace(/\./g,'').replace(',','.'));
+    return Number.isFinite(n)&&n>0?n.toFixed(2):'';
+  };
+  const bloco=(inicio,fim)=>{
+    const a=texto.search(inicio);
+    if(a<0)return '';
+    const resto=texto.slice(a);
+    const b=resto.search(fim);
+    return (b>0?resto.slice(0,b):resto).slice(0,2500);
+  };
+
+  const isNfse=/DANFSe|NFS-e|NOTA FISCAL DE SERVIÇO ELETRÔNICA/i.test(plano);
+  const isNfe=/DANFE|NF-e|NOTA FISCAL ELETRÔNICA DE PRODUTO/i.test(plano);
+  if(isNfse)el('tipo').value='nfse';
+  else if(isNfe)el('tipo').value='nfe';
+
+  // Número: somente o número vinculado ao rótulo da NFS-e/NF-e.
+  let numero='';
+  if(isNfse){
+    numero=achar(/(?:Número|Nº|N°)\s*(?:da\s*)?NFS-e\s*[:#-]?\s*(\d{1,20})/i) ||
+           achar(/NFS-e\s*(?:nº|n°|número)?\s*[:#-]?\s*(\d{1,20})/i);
+  }else if(isNfe){
+    numero=achar(/(?:Número|Nº|N°)\s*(?:da\s*)?NF-e\s*[:#-]?\s*(\d{1,20})/i) ||
+           achar(/(?:N[º°.]?\s*)(\d{1,20})\s*(?:SÉRIE|DATA)/i);
+  }
+
+  // Data de emissão, nunca a data de competência ou vencimento.
+  let data='';
+  if(isNfse){
+    data=achar(/Data(?:\s+e\s+hora)?\s+da\s+emissão\s+da\s+NFS-e\s*[:\-]?\s*(\d{2}\/\d{2}\/\d{4})/i) ||
+         achar(/Data\s+de\s+emissão\s*[:\-]?\s*(\d{2}\/\d{2}\/\d{4})/i);
+  }else if(isNfe){
+    data=achar(/(?:DATA\s+DE\s+EMISSÃO|EMISSÃO)\s*[:\-]?\s*(\d{2}\/\d{2}\/\d{4})/i);
+  }
+
+  const prestador=bloco(/(?:PRESTADOR\s+DE\s+SERVIÇO|PRESTADOR\s+DO\s+SERVIÇO|DADOS\s+DO\s+PRESTADOR)/i,/(?:TOMADOR\s+DO\s+SERVIÇO|TOMADOR\s+DE\s+SERVIÇO|INTERMEDIÁRIO|SERVIÇO\s+PRESTADO)/i);
+  const tomador=bloco(/(?:TOMADOR\s+DO\s+SERVIÇO|TOMADOR\s+DE\s+SERVIÇO|DADOS\s+DO\s+TOMADOR)/i,/(?:INTERMEDIÁRIO|SERVIÇO\s+PRESTADO|DESCRIÇÃO\s+DO\s+SERVIÇO|VALOR\s+DO\s+SERVIÇO)/i);
+  const cnpjRe=/(?:CNPJ(?:\s*\/\s*CPF)?|CPF\/CNPJ)\s*[:\-]?\s*(\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2})/i;
+  let cnpjPrestador=achar(cnpjRe,prestador);
+  let cnpjTomador=achar(cnpjRe,tomador);
+
+  // Em alguns layouts o CNPJ aparece na mesma linha do rótulo do participante.
+  if(!cnpjPrestador)cnpjPrestador=achar(/PRESTADOR[\s\S]{0,180}?CNPJ\s*[:\-]?\s*(\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2})/i);
+  if(!cnpjTomador)cnpjTomador=achar(/TOMADOR[\s\S]{0,180}?CNPJ\s*[:\-]?\s*(\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2})/i);
+
+  // Razão social somente quando houver rótulo explícito no bloco do prestador.
+  let razao=achar(/(?:Nome\/Razão\s+Social|Razão\s+Social|Nome\s+Empresarial)\s*[:\-]?\s*([^\n]{3,120})/i,prestador);
+  if(!razao)razao=achar(/(?:Nome\/Razão\s+Social|Razão\s+Social|Nome\s+Empresarial)\s*[:\-]?\s*([A-ZÀ-Ü0-9 .&/'-]{5,120})/i);
+
+  // Total bruto: exigir rótulo de total da nota/serviços; não capturar impostos,
+  // valor líquido, base de cálculo, retenções ou parcelas.
+  let valor='';
+  if(isNfse){
+    valor=achar(/(?:VALOR\s+TOTAL\s+DA\s+NFS-e|VALOR\s+TOTAL\s+DA\s+NOTA|VALOR\s+DOS\s+SERVIÇOS)\s*[:\-]?\s*R?\$?\s*([\d.]+,\d{2})/i);
+  }else if(isNfe){
+    valor=achar(/(?:VALOR\s+TOTAL\s+DA\s+NF-e|VALOR\s+TOTAL\s+DA\s+NOTA|VALOR\s+TOTAL\s+DOS\s+PRODUTOS)\s*[:\-]?\s*R?\$?\s*([\d.]+,\d{2})/i);
+  }
+  const descricaoBloco=bloco(/(?:DESCRIÇÃO\s+DO\s+SERVIÇO|DISCRIMINAÇÃO\s+DO\s+SERVIÇO|DESCRIÇÃO\s+DOS\s+SERVIÇOS)/i,/(?:INFORMAÇÕES\s+COMPLEMENTARES|TRIBUTAÇÃO|VALOR\s+TOTAL|CÁLCULO\s+DO\s+ISS)/i);
+  let descricao=descricaoBloco.replace(/^(?:DESCRIÇÃO\s+DO\s+SERVIÇO|DISCRIMINAÇÃO\s+DO\s+SERVIÇO|DESCRIÇÃO\s+DOS\s+SERVIÇOS)\s*[:\-]?\s*/i,'').trim();
+
   if(numero)el('numero').value=numero;
-  if(data)el('emissao').value=data;
-  if(cnpj)el('prestador').value=cnpj;
-  if(razao)el('razao').value=razao.slice(0,100);
-  if(valor)el('bruto').value=Number(valor.replace(/\./g,'').replace(',','.')).toFixed(2);
-  if(!el('tipoDoc').value)el('tipoDoc').value='PDF – conferir tipo';
+  if(data){
+    const [dd,mm,aaaa]=data.split('/');
+    el('emissao').value=aaaa+'-'+mm+'-'+dd;
+  }
+  if(cnpjPrestador)el('prestador').value=cnpjFormatado(cnpjPrestador);
+  if(cnpjTomador)el('tomador').value=cnpjFormatado(cnpjTomador);
+  if(razao)el('razao').value=razao.replace(/\s+/g,' ').trim().slice(0,120);
+  const bruto=valorBR(valor);
+  if(bruto)el('bruto').value=bruto;
+  if(descricao)el('servico').value=descricao.replace(/\s+/g,' ').slice(0,1000);
+
+  const encontrados=[numero,data,cnpjPrestador,cnpjTomador,razao,bruto,descricao].filter(Boolean).length;
+  return {tipo:isNfse?'NFS-e':isNfe?'NF-e':'não identificado',encontrados};
 }
 
 async function lerDocumentoPDF(){
@@ -243,7 +318,15 @@ async function lerDocumentoPDF(){
       aviso('Extraindo texto da página '+p+' de '+pdf.numPages+'…','');
       const page=await pdf.getPage(p);
       const content=await page.getTextContent();
-      textoCompleto+=' '+content.items.map(i=>i.str||'').join(' ');
+      const porLinha=new Map();
+      for(const item of content.items){
+        const y=Math.round((item.transform?.[5]||0)/2)*2;
+        const x=item.transform?.[4]||0;
+        if(!porLinha.has(y))porLinha.set(y,[]);
+        porLinha.get(y).push({x,str:item.str||''});
+      }
+      const linhas=[...porLinha.entries()].sort((a,b)=>b[0]-a[0]).map(([,itens])=>itens.sort((a,b)=>a.x-b.x).map(i=>i.str).join(' ').trim()).filter(Boolean);
+      textoCompleto+='\\n'+linhas.join('\\n');
     }
     if(textoCompleto.trim().length>40){
       extrairCamposTextoFiscal(textoCompleto);
