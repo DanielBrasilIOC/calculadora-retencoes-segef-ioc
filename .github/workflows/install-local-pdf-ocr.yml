@@ -37,7 +37,7 @@ jobs:
           cp node_modules/tesseract.js/dist/tesseract.min.js vendor/tesseract/
           find node_modules/tesseract.js-core -type f -name 'tesseract-core*.wasm.js' -exec cp {} vendor/tesseract-core/ \;
           find node_modules/tesseract.js-core -type f -name 'tesseract-core*.wasm' -exec cp {} vendor/tesseract-core/ \;
-          find node_modules/@tesseract.js-data/por -type f -name 'por.traineddata*' -exec cp {} vendor/tessdata/ \\;
+          find node_modules/@tesseract.js-data/por -type f -name 'por.traineddata*' -exec cp {} vendor/tessdata/ \;
           test -s vendor/pdfjs/pdf.mjs
           test -s vendor/pdfjs/pdf.worker.mjs
           test -s vendor/tesseract/worker.min.js
