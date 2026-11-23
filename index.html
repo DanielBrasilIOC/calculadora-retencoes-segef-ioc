@@ -452,7 +452,7 @@ async function lerArquivo(){
 }
 
 async function testarGatewayCBS(){
-  const base=(el('cbsGatewayUrl').value||'').trim().replace(/\\/$/,'');
+  const base=(el('cbsGatewayUrl').value||'').trim().replace(/\/$/,'');
   if(!base){el('resultadoApiCbs').textContent='Informe o endereço do gateway institucional.';return;}
   try{
     const r=await fetch(base+'/health',{headers:{'Accept':'application/json'}});
@@ -461,16 +461,16 @@ async function testarGatewayCBS(){
   }catch(e){el('resultadoApiCbs').textContent='Não foi possível acessar o gateway. Verifique endereço, publicação e CORS.';}
 }
 async function chamadaGatewayCBS(path,options={}){
-  const base=(el('cbsGatewayUrl').value||'').trim().replace(/\\/$/,'');
-  if(!/^https:\\/\\//i.test(base))throw new Error('Informe um endereço HTTPS válido para o gateway institucional.');
+  const base=(el('cbsGatewayUrl').value||'').trim().replace(/\/$/,'');
+  if(!/^https:\/\//i.test(base))throw new Error('Informe um endereço HTTPS válido para o gateway institucional.');
   const r=await fetch(base+path,{...options,credentials:'include',headers:{'Accept':'application/json',...(options.headers||{})}});
   const d=await r.json().catch(()=>({}));
   if(!r.ok)throw new Error(d.message||d.error||('Erro HTTP '+r.status));
   return d;
 }
 async function solicitarConsultaCBS(){
-  const cnpj=(el('cbsCnpjBase').value||'').replace(/\\D/g,'');
-  if(!/^\\d{8}$/.test(cnpj)){el('resultadoApiCbs').textContent='Informe um CNPJ-base com exatamente 8 dígitos.';return;}
+  const cnpj=(el('cbsCnpjBase').value||'').replace(/\D/g,'');
+  if(!/^\d{8}$/.test(cnpj)){el('resultadoApiCbs').textContent='Informe um CNPJ-base com exatamente 8 dígitos.';return;}
   if(!confirm('A solicitação será enviada à Receita Federal e consumirá uma chamada da cota diária deste serviço. Deseja continuar?'))return;
   el('resultadoApiCbs').textContent='Enviando solicitação à Receita Federal...';
   try{
@@ -493,7 +493,7 @@ async function baixarResultadoCBS(){
   el('resultadoApiCbs').textContent='Consultando a conclusão e obtendo o arquivo JSON...';
   try{
     const d=await chamadaGatewayCBS('/api/cbs/requests/'+encodeURIComponent(ticket)+'/result');
-    el('resultadoApiCbs').textContent='Resultado da apuração CBS recebido:\\n'+JSON.stringify(d.data,null,2);
+    el('resultadoApiCbs').textContent='Resultado da apuração CBS recebido:\n'+JSON.stringify(d.data,null,2);
   }catch(e){el('resultadoApiCbs').textContent='Resultado ainda indisponível ou falha na consulta: '+e.message;}
 }
 
