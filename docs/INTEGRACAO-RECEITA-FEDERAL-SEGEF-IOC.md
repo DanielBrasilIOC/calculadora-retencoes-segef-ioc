@@ -11,6 +11,17 @@ A integração deve preservar os módulos existentes (IRRF, CSLL, PIS/Pasep, Cof
 
 ## 2. Fontes oficiais e componentes identificados
 
+### 2.0 Quadro de incorporação dos três repositórios oficiais
+
+| Repositório oficial | Linguagem | Situação no projeto SEGEF/IOC | Integração pretendida |
+|---|---|---|---|
+| [calculadora-rtc-regime-regular](https://github.com/ReceitaFederal/calculadora-rtc-regime-regular) | Java | **Não incorporado ao código da calculadora** | Avaliar e integrar o motor oficial de cálculo de CBS, IBS e Imposto Seletivo, incluindo consultas às tabelas tributárias e validações de documentos fiscais. |
+| [calculadora-rtc-simples-nacional](https://github.com/ReceitaFederal/calculadora-rtc-simples-nacional) | Java | **Não incorporado ao código da calculadora** | Avaliar e integrar as regras específicas de cálculo de CBS e IBS para contribuintes optantes pelo Simples Nacional. |
+| [calculadora-rtc-gerador-danfse](https://github.com/ReceitaFederal/calculadora-rtc-gerador-danfse) | Go | **Não incorporado ao código da calculadora** | Avaliar a geração e a validação do DANFSe em PDF a partir do XML da NFS-e, como recurso auxiliar de visualização e conferência. |
+
+**Nota de status:** os três projetos estão identificados e documentados como componentes oficiais a serem avaliados para integração. Nesta etapa, seus códigos-fonte ainda não foram incorporados ao repositório SEGEF/IOC, nem foram executados, adaptados ou homologados no ambiente institucional. A inclusão nesta documentação não deve ser interpretada como funcionalidade já disponível.
+
+
 ### 2.1 Calculadora de Tributos — regime regular
 
 - Repositório: https://github.com/ReceitaFederal/calculadora-rtc-regime-regular
@@ -115,3 +126,19 @@ Esta documentação registra fontes e arquitetura proposta. **Não significa que
 - Calculadora RTC Simples Nacional: https://github.com/ReceitaFederal/calculadora-rtc-simples-nacional
 - Gerador DANFSe: https://github.com/ReceitaFederal/calculadora-rtc-gerador-danfse
 - SVRS — API Conformidade Fácil: https://dfe-portal.svrs.rs.gov.br/DFE/Noticias/2505
+
+
+## 10. Implementação técnica do gateway (23/11/2026)
+
+Foi criada na branch `feature/receita-cbs-secure-backend` a primeira implementação do gateway Cloudflare Worker em `backend/cbs-gateway/`, com:
+- autenticação OAuth2 Client Credentials no endpoint Receita Integra;
+- rotas para abrir consultas de débitos, créditos, pagamentos e recolhimentos;
+- consulta de situação e download do retorno JSON;
+- verificação de JWT Cloudflare Access, CORS por origem e lista de CNPJ-base permitidos;
+- tratamento da URL assinada somente no servidor, sem retorná-la ao navegador;
+- interface da calculadora para informar o gateway, abrir consulta, acompanhar o tíquete e visualizar o JSON recebido;
+- workflow de CI para validar o bundle do Worker.
+
+**Situação:** código preparado em branch e sujeito a validação automatizada/revisão. Não está implantado em infraestrutura Cloudflare, não contém credenciais e não executou chamadas reais à Receita. A ativação depende da autorização institucional, da criação do Worker/hostname, da política Cloudflare Access, do cadastro de segredos e da confirmação do CNPJ-base e do ambiente oficial de teste.
+
+A interface web permanece sem acesso à Receita enquanto o gateway não estiver implantado e configurado. O cálculo IBS/CBS continua sendo simulação aritmética; a integração do motor oficial de cálculo local é uma frente distinta e ainda não está conectada.

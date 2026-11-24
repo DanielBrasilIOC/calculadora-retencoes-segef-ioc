@@ -1,0 +1,14 @@
+name = "segef-cbs-gateway"
+main = "src/index.js"
+compatibility_date = "2026-11-23"
+
+# Configure a custom hostname for this Worker and protect it with Cloudflare Access.
+# Keep RFB_CLIENT_ID and RFB_CLIENT_SECRET as Worker secrets, never as vars.
+[vars]
+RFB_TOKEN_URL = "https://api.receitafederal.gov.br/token"
+RFB_CBS_API_BASE = "https://api.receitafederal.gov.br/apuracao-cbs/v2"
+APP_ORIGIN = "https://danielbrasilIOC.github.io"
+
+# Required secrets/vars are configured in the Cloudflare dashboard:
+# RFB_CLIENT_ID, RFB_CLIENT_SECRET, ACCESS_TEAM_DOMAIN, ACCESS_AUD,
+# ALLOWED_CNPJ_BASES. Set APP_ORIGIN to the exact frontend origin.

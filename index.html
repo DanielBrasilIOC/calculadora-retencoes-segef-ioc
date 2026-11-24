@@ -152,8 +152,27 @@ footer{text-align:center;padding:22px;color:var(--muted);font-size:12px}
 <p class="note">A consulta às tabelas oficiais e às APIs autenticadas ainda não está conectada. Não inserir certificados, tokens ou credenciais nesta página. Para uso em aquisição pública, confirmar a regra aplicável, o período de vigência, o regime do fornecedor, a classificação tributária e eventual responsabilidade do adquirente. IBS/CBS destacados ou calculados não são automaticamente valores a deduzir do pagamento ao fornecedor.</p>
 </section>
 
+<section class="panel" id="consultaReceitaCBS">
+<h2>5. Consulta à Apuração Assistida da CBS – Receita Federal</h2>
+<p class="note">Conector institucional protegido. A consulta transmite somente o CNPJ-base e o tipo de consulta à Receita Federal; nenhum XML/PDF da nota é enviado. As credenciais permanecem no servidor protegido e nunca devem ser digitadas nesta página.</p>
+<div class="grid">
+  <div><label for="cbsGatewayUrl">Endereço do gateway institucional</label><input id="cbsGatewayUrl" type="url" placeholder="https://api.seu-dominio.gov.br"></div>
+  <div><label for="cbsCnpjBase">CNPJ-base autorizado (8 dígitos)</label><input id="cbsCnpjBase" inputmode="numeric" maxlength="8" placeholder="Somente números"></div>
+  <div><label for="cbsTipoConsulta">Consulta da Receita</label><select id="cbsTipoConsulta"><option value="debitos">Débitos CBS</option><option value="creditos">Créditos CBS</option><option value="pagamentos">Pagamentos CBS (PCONT/RAD)</option><option value="recolhimentos">Recolhimentos CBS como adquirente (RAD)</option></select></div>
+  <div><label for="cbsTicket">Tíquete da solicitação</label><input id="cbsTicket" placeholder="Será preenchido após a abertura"></div>
+</div>
+<div class="actions">
+  <button class="secondary" onclick="testarGatewayCBS()">Testar conexão</button>
+  <button onclick="solicitarConsultaCBS()">Solicitar consulta à Receita</button>
+  <button class="secondary" onclick="consultarSituacaoCBS()">Consultar situação</button>
+  <button class="secondary" onclick="baixarResultadoCBS()">Obter resultado JSON</button>
+</div>
+<div id="resultadoApiCbs" class="status" aria-live="polite">Gateway ainda não configurado. Informe o endereço institucional após a implantação e liberação do acesso.</div>
+<p class="note">As APIs da Receita são assíncronas e incrementais. A abertura consome cota diária por credencial e serviço. Aguarde a conclusão antes de solicitar novamente. O JSON retornado é dado de apuração CBS e não determina, isoladamente, retenção ou dedução no pagamento ao fornecedor.</p>
+</section>
+
 <section class="panel">
-<h2>5. Memória de cálculo</h2>
+<h2>6. Memória de cálculo</h2>
 <div id="resultado" class="status">Aguardando cálculo.</div>
 <table>
 <thead><tr><th>Tributo</th><th>Base (R$)</th><th>Alíquota</th><th class="money">Valor (R$)</th></tr></thead>
@@ -167,14 +186,14 @@ footer{text-align:center;padding:22px;color:var(--muted);font-size:12px}
 </section>
 
 <section class="panel">
-<h2>6. Alertas e validações</h2>
+<h2>7. Alertas e validações</h2>
 <div id="alertas">
   <p class="note">A validade fiscal, o enquadramento tributário, a incidência e a responsabilidade pela retenção precisam ser verificados antes da conclusão.</p>
 </div>
 </section>
 
 <section class="panel" id="secaoNormativa">
-<h2>7. Base normativa e consulta legal</h2>
+<h2>8. Base normativa e consulta legal</h2>
 <p class="note">Repositório de consulta para apoiar a conferência fiscal. A situação e os dispositivos abaixo são referências de navegação, não um parecer jurídico nem uma conclusão automática de incidência. Sempre abra a fonte oficial e confira o texto consolidado, a data do fato gerador/pagamento e as regras específicas do caso.</p>
 <div class="norm-tools">
   <div><label for="filtroNorma">Pesquisar norma, artigo ou tributo</label><input id="filtroNorma" type="search" placeholder="Ex.: IN 1.234, art. 3º, IRRF, INSS..." oninput="renderNormas()"></div>
@@ -430,6 +449,52 @@ async function lerArquivo(){
     aviso('Leitura concluída no navegador. Confira todos os campos extraídos antes de calcular. A leitura não valida a autorização fiscal.','ok');
     el('alertas').innerHTML='<p class="note">Documento lido localmente. A autorização, cancelamento, substituição, regime tributário, contrato e hipóteses de retenção ainda precisam de validação.</p>';
   }catch(e){aviso(e.message,'warning');}
+}
+
+async function testarGatewayCBS(){
+  const base=(el('cbsGatewayUrl').value||'').trim().replace(/\/$/,'');
+  if(!base){el('resultadoApiCbs').textContent='Informe o endereço do gateway institucional.';return;}
+  try{
+    const r=await fetch(base+'/health',{headers:{'Accept':'application/json'}});
+    const d=await r.json();
+    el('resultadoApiCbs').textContent=r.ok?'Gateway respondeu: '+JSON.stringify(d):'Falha no diagnóstico do gateway.';
+  }catch(e){el('resultadoApiCbs').textContent='Não foi possível acessar o gateway. Verifique endereço, publicação e CORS.';}
+}
+async function chamadaGatewayCBS(path,options={}){
+  const base=(el('cbsGatewayUrl').value||'').trim().replace(/\/$/,'');
+  if(!/^https:\/\//i.test(base))throw new Error('Informe um endereço HTTPS válido para o gateway institucional.');
+  const r=await fetch(base+path,{...options,credentials:'include',headers:{'Accept':'application/json',...(options.headers||{})}});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.message||d.error||('Erro HTTP '+r.status));
+  return d;
+}
+async function solicitarConsultaCBS(){
+  const cnpj=(el('cbsCnpjBase').value||'').replace(/\D/g,'');
+  if(!/^\d{8}$/.test(cnpj)){el('resultadoApiCbs').textContent='Informe um CNPJ-base com exatamente 8 dígitos.';return;}
+  if(!confirm('A solicitação será enviada à Receita Federal e consumirá uma chamada da cota diária deste serviço. Deseja continuar?'))return;
+  el('resultadoApiCbs').textContent='Enviando solicitação à Receita Federal...';
+  try{
+    const d=await chamadaGatewayCBS('/api/cbs/requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service:el('cbsTipoConsulta').value,cnpjBase:cnpj})});
+    el('cbsTicket').value=d.ticket||'';
+    el('resultadoApiCbs').textContent='Solicitação aberta. Tíquete: '+(d.ticket||'não retornado')+'. Tempo estimado (segundos): '+(d.estimatedSeconds??'não informado')+'. Use “Consultar situação” para acompanhar.';
+  }catch(e){el('resultadoApiCbs').textContent='Não foi possível abrir a consulta: '+e.message;}
+}
+async function consultarSituacaoCBS(){
+  const ticket=(el('cbsTicket').value||'').trim();
+  if(!ticket){el('resultadoApiCbs').textContent='Informe o tíquete da solicitação.';return;}
+  try{
+    const d=await chamadaGatewayCBS('/api/cbs/requests/'+encodeURIComponent(ticket)+'/status');
+    el('resultadoApiCbs').textContent='Situação da Receita Federal: '+(d.situacao||'não informada')+(d.mensagemErro?' — '+d.mensagemErro:'');
+  }catch(e){el('resultadoApiCbs').textContent='Falha ao consultar situação: '+e.message;}
+}
+async function baixarResultadoCBS(){
+  const ticket=(el('cbsTicket').value||'').trim();
+  if(!ticket){el('resultadoApiCbs').textContent='Informe o tíquete da solicitação.';return;}
+  el('resultadoApiCbs').textContent='Consultando a conclusão e obtendo o arquivo JSON...';
+  try{
+    const d=await chamadaGatewayCBS('/api/cbs/requests/'+encodeURIComponent(ticket)+'/result');
+    el('resultadoApiCbs').textContent='Resultado da apuração CBS recebido:\n'+JSON.stringify(d.data,null,2);
+  }catch(e){el('resultadoApiCbs').textContent='Resultado ainda indisponível ou falha na consulta: '+e.message;}
 }
 
 function calcularReforma(){
