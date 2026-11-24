@@ -11,6 +11,17 @@ A integração deve preservar os módulos existentes (IRRF, CSLL, PIS/Pasep, Cof
 
 ## 2. Fontes oficiais e componentes identificados
 
+### 2.0 Quadro de incorporação dos três repositórios oficiais
+
+| Repositório oficial | Linguagem | Situação no projeto SEGEF/IOC | Integração pretendida |
+|---|---|---|---|
+| [calculadora-rtc-regime-regular](https://github.com/ReceitaFederal/calculadora-rtc-regime-regular) | Java | **Não incorporado ao código da calculadora** | Avaliar e integrar o motor oficial de cálculo de CBS, IBS e Imposto Seletivo, incluindo consultas às tabelas tributárias e validações de documentos fiscais. |
+| [calculadora-rtc-simples-nacional](https://github.com/ReceitaFederal/calculadora-rtc-simples-nacional) | Java | **Não incorporado ao código da calculadora** | Avaliar e integrar as regras específicas de cálculo de CBS e IBS para contribuintes optantes pelo Simples Nacional. |
+| [calculadora-rtc-gerador-danfse](https://github.com/ReceitaFederal/calculadora-rtc-gerador-danfse) | Go | **Não incorporado ao código da calculadora** | Avaliar a geração e a validação do DANFSe em PDF a partir do XML da NFS-e, como recurso auxiliar de visualização e conferência. |
+
+**Nota de status:** os três projetos estão identificados e documentados como componentes oficiais a serem avaliados para integração. Nesta etapa, seus códigos-fonte ainda não foram incorporados ao repositório SEGEF/IOC, nem foram executados, adaptados ou homologados no ambiente institucional. A inclusão nesta documentação não deve ser interpretada como funcionalidade já disponível.
+
+
 ### 2.1 Calculadora de Tributos — regime regular
 
 - Repositório: https://github.com/ReceitaFederal/calculadora-rtc-regime-regular
